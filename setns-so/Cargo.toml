@@ -2,12 +2,14 @@
 name = "setns"
 version = "1.0.0"
 authors = ["jeff.dileo@nccgroup.com"]
+edition = "2024"
 
 [lib]
 name = "setns"
 #crate-type = ["dylib"]
 crate-type = ["cdylib"]
 #crate-type = ["staticlib"]
+#path = "src/libw.rs"
 
 [[bin]]
 name = "insject"
@@ -19,6 +21,7 @@ gumshoe = { git = "https://github.com/ChaosData/frida-gum-rs" }
 setns-common = { path = "../setns-common" }
 clap = "3.0.0-beta.2"
 libc = "0.2"
+ctor = "0.2.8"
 
 [build-dependencies]
 #gumshoe = { path = "../../frida-gum-rs" }

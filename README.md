@@ -26,15 +26,31 @@ they may be able to abuse the access of the joined process to escape.
 ## Installation
 
 ```
-$ wget https://github.com/frida/frida/releases/download/14.2.17/frida-gum-devkit-14.2.17-linux-x86_64.tar.xz
-$ tar -xvJf frida-gum-devkit-14.2.17-linux-x86_64.tar.xz
-$ mv frida-gum.h setns-so/frida/
-$ mv libfrida-gum.a setns-so/frida/x86_64-unknown-linux-gnu/
+$ git clone https://github.com/ChaosData/insject
+$ cd insject/setns-so
+$ ./fetch-frida.sh 16.5.9 linux x86_64 x86_64-unknown-linux-gnu
+$ cargo build --lib --release && cargo build --bin insject --release
 $ pip3 install --user lief
+$ ./patch.py target/release/insject
+```
+
+### Android
+
+```
+## cargo-ndk
+$ cd insject/setns-so
+$ export ANDROID_NDK_HOME=...
+$ ./fetch-frida.sh 16.5.9 android arm64 aarch64-linux-android
+$ cargo ndk -t aarch64-linux-android build --lib --release && cargo ndk -t aarch64-linux-android build --bin insject --release
+$ rm .cargo/config.toml
+$ ./fetch-frida.sh 16.5.9 android x86_64 x86_64-linux-android
+$ cargo ndk -t x86_64-linux-android build --lib --release && cargo ndk -t x86_64-linux-android build --bin insject --release
+
+## cross
 $ cd setns-so
-$ cargo build --lib --release
-$ cargo build --bin insject --release
-$ python3 patch.py target/release/insject
+$ cross build --lib --release --target aarch64-linux-android && cross build --bin insject --release --target aarch64-linux-android
+$ rm .cargo/config.toml
+$ cross build --lib --release --target x86_64-linux-android && cross build --bin insject --release --target x86_64-linux-android
 ```
 
 ## Examples
@@ -178,6 +194,15 @@ OPTIONS:
     -u, --userns <userns>               Path to user namespace to set
     -h, --uts <uts>                     Path to UTS (hostname) namespace to set
 ```
+
+# Weird Errors?
+
+Due to the `build.rs` logic in use, when changing target architectures, you
+will want to delete the `.config/cargo.toml` file generated within the
+`setns-so/` directory before attempting a build using a different target than
+the previous build. Additionally, depending on if using multiple separate build
+environments out of the same clone, you may need to perform a `cargo clean` or
+equivalent removal of targets to prevent linking errors.
 
 # License
 

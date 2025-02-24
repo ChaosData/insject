@@ -23,12 +23,15 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#[macro_use]
+extern crate ctor;
+
 extern crate gumshoe;
 extern crate libc;
 extern crate setns_common;
 
-mod lib;
-pub use lib::*;
+mod core;
+pub use core::*;
 // use std::io::Write;
 
 extern crate clap;
@@ -204,9 +207,10 @@ fn run_cmd(opts: &InsjectOpts, setns_opts: &setns_common::Opts) {
   let json_str = setns_common::to_json(setns_opts).unwrap();
 
   let self_path = std::fs::read_link("/proc/self/exe").unwrap();
-  std::env::set_var("LD_PRELOAD", self_path.as_os_str());
-
-  std::env::set_var("SETNS_JSON", json_str);
+  unsafe {
+    std::env::set_var("LD_PRELOAD", self_path.as_os_str());
+    std::env::set_var("SETNS_JSON", json_str);
+  }
 
   let file = std::ffi::CString::new(cmd[0].clone()).unwrap();
   let argv_cs: std::vec::Vec<std::ffi::CString> = cmd.into_iter().map(|s|

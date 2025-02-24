@@ -7,3 +7,4 @@ frida-gum-example.c
 frida-gum-devkit-*
 test
 test.c
+.cargo/config.toml
