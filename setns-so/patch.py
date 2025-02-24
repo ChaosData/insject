@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # https://lief.quarkslab.com/doc/latest/tutorials/08_elf_bin2lib.html#warning-for-glibc-2-29-users
 
 import lief
