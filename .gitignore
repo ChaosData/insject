@@ -2,3 +2,4 @@
 frida-gum-devkit-*.tar.xz
 frida-gum-devkit-*/
 *.save
+*.swp

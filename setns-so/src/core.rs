@@ -1,5 +1,6 @@
 /*
 Copyright (c) NCC Group, 2021
+Copyright (c) Google, 2025
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -774,11 +775,13 @@ pub extern "C" fn do_setns_external(args: *const c_char) {
     format!("{}/{}/{}", uid_r, gid_r, groups_r)
   };
 
+  let mut selinux = false;
   let aa_r = match attr_current_fd {
     None => "N/A".to_owned(),
     Some(fd) => {
-      let s: String = format!("changeprofile {}", apparmor_profile);
-      let s: String = if s.as_bytes()[s.len()-1] == 0 {
+      let s: String = apparmor_profile;
+      selinux = s.as_bytes()[s.len()-1] == 0;
+      let s: String = if selinux {
         match s.get(..s.len()-1) {
           Some(ss) => ss.into(),
           None => s
@@ -786,12 +789,30 @@ pub extern "C" fn do_setns_external(args: *const c_char) {
       } else {
         s
       };
-      let data = std::ffi::CString::new(s.as_str()).unwrap();
-      let _ = unsafe {
-        write(fd, data.as_ptr() as *const c_void, s.len())
+
+      let r = if selinux {
+        //selinux (android)
+        let fd = open_for_fd(&"/proc/thread-self/attr/current".to_owned(), O_WRONLY);
+        let r = unsafe {
+          write(fd, s.as_bytes().as_ptr() as *const c_void, s.len())
+        };
+        let _ = unsafe { close(fd) };
+        r
+      } else {
+        //apparmor
+        let changeprofile: String = format!("changeprofile {}", s);
+        let data = std::ffi::CString::new(changeprofile.as_str()).unwrap();
+        let r = unsafe {
+          write(fd, data.as_ptr() as *const c_void, s.len())
+        };
+        let _ = unsafe { close(fd) };
+        r
       };
-      let _ = unsafe { close(fd) };
-      format!("{}", apparmor_profile)
+      if r > 0 {
+        format!("{}", s)
+      } else {
+        format!("{}->{}", s, r)
+      }
     }
   };
 
@@ -805,11 +826,11 @@ pub extern "C" fn do_setns_external(args: *const c_char) {
   }
 
   if !opts.userns_first {
-    println!("[insject] -> mnt: {}, net: {}, time: {}, ipc: {}, uts: {}, pid: {}, cgroup: {}, userns: {}, apparmor: {}, user: {}",
-             mnt_ns_r, net_ns_r, time_ns_r, ipc_ns_r, uts_ns_r, pid_ns_r, cgroup_ns_r, user_ns_r, aa_r, user_r);
+    println!("[insject] -> mnt: {}, net: {}, time: {}, ipc: {}, uts: {}, pid: {}, cgroup: {}, userns: {}, {}: {}, user: {}",
+             mnt_ns_r, net_ns_r, time_ns_r, ipc_ns_r, uts_ns_r, pid_ns_r, cgroup_ns_r, user_ns_r, if selinux { "selinux" } else { "apparmor" }, aa_r, user_r);
   } else {
-    println!("[insject] -> userns: {}, mnt: {}, net: {}, time: {}, ipc: {}, uts: {}, pid: {}, cgroup: {}, apparmor: {}, user: {}",
-             user_ns_r, mnt_ns_r, net_ns_r, time_ns_r, ipc_ns_r, uts_ns_r, pid_ns_r, cgroup_ns_r, aa_r, user_r);
+    println!("[insject] -> userns: {}, mnt: {}, net: {}, time: {}, ipc: {}, uts: {}, pid: {}, cgroup: {}, {}: {}, user: {}",
+             user_ns_r, mnt_ns_r, net_ns_r, time_ns_r, ipc_ns_r, uts_ns_r, pid_ns_r, cgroup_ns_r, if selinux { "selinux" } else { "apparmor" }, aa_r, user_r);
   }
 
   if opts.strict {

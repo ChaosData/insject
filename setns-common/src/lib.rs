@@ -1,5 +1,6 @@
 /*
 Copyright (c) NCC Group, 2021
+Copyright (c) Google, 2025
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -24,10 +25,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 extern crate clap;
-//use clap::AppSettings;
-//pub use clap::Clap;
-//pub use clap::AppSettings;
-use clap::{Clap,AppSettings};
+use clap::{Parser,AppSettings};
 
 extern crate commands;
 use commands::tokenizer::{tokenize,TokenType};
@@ -37,7 +35,7 @@ use serde::{Deserialize, Serialize};
 
 extern crate serde_json;
 
-#[derive(Clap,Clone,Debug,Deserialize,Serialize)]
+#[derive(Parser,Clone,Debug,Deserialize,Serialize)]
 #[clap(name = "libsetns.so", version = "1.0",
        author = "Jeff Dileo <jeff.dileo@nccgroup.com>",
        about = "An inject-/LD_PRELOAD-able shim to simplify container testing \
@@ -47,39 +45,40 @@ WARNING: Be careful when accessing or executing files in \
          containers as they may
          be able to abuse the access \
          of the joined process to escape.",
-       setting = AppSettings::ColoredHelp
+       setting(AppSettings::ColoredHelp),
+       //setting(AppSettings::TrailingVarArg),
 )]
 pub struct Opts {
   #[clap(short = 's', long = "symbol", name = "symbol",
-         about = "Symbol to hook entry of instead of main")]
+         help = "Symbol to hook entry of instead of main")]
   pub sym_name: Option<String>,
   #[clap(short = '@', long = "raw-address", name = "address",
-         about = "Raw memory address to hook instead of a symbol\nNote: This is not an offset")]
+         help = "Raw memory address to hook instead of a symbol\nNote: This is not an offset")]
   pub raw_address: Option<usize>,
-  #[clap(about = "PID to source namespaces from by default",
+  #[clap(help = "PID to source namespaces from by default",
          validator = |val| { val.parse::<usize>().map_err(|_| format!("must be a non-negative number, got: {}", val)) } )]
   pub target_pid: Option<usize>,
-  #[clap(short = '1', long, about = "Set user namespace before other namespaces")]
+  #[clap(short = '1', long, help = "Set user namespace before other namespaces")]
   pub userns_first: bool,
 
-  #[clap(short, long, about = "Path to mount namespace to set")]
+  #[clap(short, long, help = "Path to mount namespace to set")]
   pub mnt: Option<String>,
-  #[clap(short, long, about = "Path to network namespace to set")]
+  #[clap(short, long, help = "Path to network namespace to set")]
   pub net: Option<String>,
-  #[clap(short, long, about = "Path to time namespace to set")]
+  #[clap(short, long, help = "Path to time namespace to set")]
   pub time: Option<String>,
-  #[clap(short, long, about = "Path to IPC namespace to set")]
+  #[clap(short, long, help = "Path to IPC namespace to set")]
   pub ipc: Option<String>,
-  #[clap(short = 'h', long, about = "Path to UTS (hostname) namespace to set")]
+  #[clap(short = 'h', long, help = "Path to UTS (hostname) namespace to set")]
   pub uts: Option<String>,
-  #[clap(short, long, about = "Path to PID namespace to set")]
+  #[clap(short, long, help = "Path to PID namespace to set")]
   pub pid: Option<String>,
-  #[clap(short, long, about = "Path to cgroup namespace to set")]
+  #[clap(short, long, help = "Path to cgroup namespace to set")]
   pub cgroup: Option<String>,
-  #[clap(short, long, about = "Path to user namespace to set")]
+  #[clap(short, long, help = "Path to user namespace to set")]
   pub userns: Option<String>,
 
-  #[clap(long, about = "<uid>[:<gid>[:<group,ids>]])",
+  #[clap(long, help = "<uid>[:<gid>[:<group,ids>]])",
          default_value = "0:0:0",
          validator = |val: &str| {
            let vals: std::vec::Vec<String> = val.split(':').into_iter().map(|s| s.to_string()).collect();
@@ -107,38 +106,38 @@ pub struct Opts {
   )]
   pub user: String,
 
-  #[clap(short, long, name = "profile", about = "Alternate AppArmor profile to set")]
+  #[clap(short, long, name = "profile", help = "Alternate AppArmor profile/SELinux (Android) context to set")]
   pub apparmor_profile: Option<String>,
 
-  #[clap(short = 'F', long, about = "Skip fork after entering PID namespace, if entering PID namespace")]
+  #[clap(short = 'F', long, help = "Skip fork after entering PID namespace, if entering PID namespace")]
   pub no_fork: bool,
 
-  #[clap(short = 'M', long, about = "Skip setting mount namespace")]
+  #[clap(short = 'M', long, help = "Skip setting mount namespace")]
   pub no_mnt: bool,
-  #[clap(short = 'N', long, about = "Skip setting network namespace")]
+  #[clap(short = 'N', long, help = "Skip setting network namespace")]
   pub no_net: bool,
-  #[clap(short = 'T', long, about = "Skip setting time namespace")]
+  #[clap(short = 'T', long, help = "Skip setting time namespace")]
   pub no_time: bool,
-  #[clap(short = 'I', long, about = "Skip setting IPC namespace")]
+  #[clap(short = 'I', long, help = "Skip setting IPC namespace")]
   pub no_ipc: bool,
-  #[clap(short = 'H', long, about = "Skip setting UTS (hostname) namespace")]
+  #[clap(short = 'H', long, help = "Skip setting UTS (hostname) namespace")]
   pub no_uts: bool,
-  #[clap(short = 'P', long, about = "Skip setting PID namespace")]
+  #[clap(short = 'P', long, help = "Skip setting PID namespace")]
   pub no_pid: bool,
-  #[clap(short = 'C', long, about = "Skip setting cgroup namespace")]
+  #[clap(short = 'C', long, help = "Skip setting cgroup namespace")]
   pub no_cgroup: bool,
-  #[clap(short = 'U', long, about = "Skip setting user namespace")]
+  #[clap(short = 'U', long, help = "Skip setting user namespace")]
   pub no_userns: bool,
 
-  #[clap(short = 'A', long, about = "Skip setting AppArmor profile")]
+  #[clap(short = 'A', long, help = "Skip setting AppArmor profile")]
   pub no_apparmor: bool,
 
-  #[clap(short = 'S', long, about = "Exit if any namespace attach fails")]
+  #[clap(short = 'S', long, help = "Exit if any namespace attach fails")]
   pub strict: bool,
 }
 
 pub fn print_help(ret: i32) {
-  match <Opts as clap::IntoApp>::into_app().print_help() {
+  match <Opts as clap::IntoApp>::into_app().print_long_help() {
     Ok(_) => {
       std::process::exit(ret);
     },

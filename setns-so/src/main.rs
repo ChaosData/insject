@@ -1,5 +1,6 @@
 /*
 Copyright (c) NCC Group, 2021
+Copyright (c) Google, 2025
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -35,13 +36,13 @@ pub use core::*;
 // use std::io::Write;
 
 extern crate clap;
-use clap::{Clap,AppSettings,ArgSettings};
+use clap::{Parser,AppSettings,ArgSettings};
 
 use std::vec::Vec;
 
 use libc::*;
 
-#[derive(Clap,Clone,Debug)]
+#[derive(Parser,Clone,Debug)]
 #[clap(name = "insject", version = "1.0",
        author = "Jeff Dileo <jeff.dileo@nccgroup.com>",
        about = "A tool to simplify container testing that runs an arbitrary\n\
@@ -54,25 +55,31 @@ Note: The -! instrumentation mode has several differences from the LD_PRELOAD mo
         * Forking is not supported
         * -S,--strict is not supported
         * errno values are not returned
+        * SELinux (Android) support is not implemented yet
 ",
        setting(AppSettings::ColoredHelp),
-       setting(AppSettings::AllowLeadingHyphen),
+       setting(AppSettings::DontDelimitTrailingValues),
+       //setting(AppSettings::AllowLeadingHyphen),
        setting(AppSettings::TrailingVarArg),
+       //setting(AppSettings::AllowMissingPositional),
 )]
 pub struct InsjectOpts {
-  #[clap(long = "help-setns", about = "Prints help information for setns.so")]
+  #[clap(long = "help-setns", help = "Prints help information for setns.so")]
   setns_help: bool,
 
-  #[clap(short = '!', name = "pid", about = "PID to instrument", conflicts_with = "cmd")]
+  #[clap(short = '!', name = "pid", help = "PID to instrument", conflicts_with = "cmd")]
   instrument_pid: Option<usize>,
 
   #[clap(
-    about = "setns.so options. For detailed information, use --help-setns",
+    multiple = true, required = false,
+    help = "setns.so options. For detailed information, use --help-setns",
     setting(ArgSettings::AllowHyphenValues),
   )]
   setns_opts: Vec<String>,
 
-  #[clap(multiple = true, last = true, required = false)]
+  #[clap(multiple = true, last = true, required = false,
+    setting(ArgSettings::AllowHyphenValues),
+  )]
   cmd: Vec<String>,
 }
 
@@ -89,7 +96,7 @@ pub fn print_help(ret: i32) {
 }
 
 fn main() {
-  let opts = InsjectOpts::parse();
+  let mut opts = InsjectOpts::parse();
   //let opts = Opts::parse();
 
   if opts.setns_help {
@@ -102,8 +109,20 @@ fn main() {
   }
 
   //println!("opts: {:?}", opts);
+  if opts.instrument_pid.is_none() {
+    let key = "--".to_string();
+    if let Some(idx) = opts.setns_opts.iter().position(|s| s == &key) {
+      opts.cmd = opts.setns_opts.split_off(idx).split_off(1);
+    } else {
+      println!("Error: `-! <pid>` not provided and `-- [cmd...]` was not found.");
+      print_help(1);
+    }
+  }
+
+  //println!("opts: {:?}", opts);
   let setns_opts = setns_common::parse_opts_parts(&opts.setns_opts);
   //println!("setns_opts: {:?}", setns_opts);
+  //println!("cmd: {:?}", opts.cmd);
 
   if opts.cmd.len() > 0 {
     run_cmd(&opts, &setns_opts);

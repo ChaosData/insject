@@ -19,9 +19,10 @@ path = "src/main.rs"
 #gumshoe = { path = "../../frida-gum-rs" }
 gumshoe = { git = "https://github.com/ChaosData/frida-gum-rs" }
 setns-common = { path = "../setns-common" }
-clap = "3.0.0-beta.2"
+clap = { version = "3.2.25", features = ["derive"] }
 libc = "0.2"
 ctor = "0.2.8"
+#selinux-sys = "0.6.14"
 
 [build-dependencies]
 #gumshoe = { path = "../../frida-gum-rs" }
